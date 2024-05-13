@@ -43,11 +43,14 @@ public partial class MainWindow : Window
 	string currentchatr = "";
     string[] reactions = ["👍", "👎", "😃", "😂", "👏", "😭", "💛", "🤔", "🎉"];
 	bool ishidden = false;
+	bool iscontextmenu = false;
 	bool shownotifications = true;
     IClipboard clipboard;
     Window notar = new();
     StackPanel notcont = new() { Orientation = Avalonia.Layout.Orientation.Vertical };
 	Dictionary<string, object> data = new();
+	Dictionary<string, ulistitem> chatslisttb = new();
+	Action<Dictionary<string, object>> loch;
 
     public MainWindow()
 	{
@@ -101,13 +104,32 @@ public partial class MainWindow : Window
                 Close();
 			};
 
+			bool launchedforchat = false;
 
 			Deactivated += (e, a) => {
+				if (iscontextmenu)
+				{
+                    ishidden = false;
+                }
+                else
 				ishidden = true;
 			};
 
             Activated += (e, a) => {
+                if (selecteditm != null && launchedforchat == false && ishidden == true)
+                {
+                    foreach (Dictionary<string, object> itm in chatslist)
+                    {
+                        if (itm["chatid"].ToString() == currentchatid)
+                        {
+                            loch(itm);
+                        }
+                    }
+
+                }
+                launchedforchat = false;
                 ishidden = false;
+				
             };
 
             ScrollViewer nl = new() { Content = notcont};
@@ -163,12 +185,7 @@ public partial class MainWindow : Window
 												if (currentchatid != notif["chatid"].ToString() || ishidden)
 												{
 													ntif nt = new();
-													nt.btn.Click += (e, a) => {
-                                                        Show();
-														Activate();
-                                                        ishidden = false;
-														
-                                                    };
+													
 													nt.title.Content = ((JObject)notif["user"])["name"].ToString();
 													nt.content.Content = notif["content"].ToString();
                                                     try
@@ -191,6 +208,22 @@ public partial class MainWindow : Window
                                                         timeout.Stop();
                                                     };
                                                     timeout.Start();
+                                                    nt.btn.Click += (e, a) => {
+														launchedforchat = true;
+                                                        foreach (Dictionary<string, object> itm in chatslist)
+                                                        {
+                                                            if (itm["chatid"].ToString() == notif["chatid"].ToString())
+                                                            {
+                                                                loch(itm);
+                                                            }
+                                                        }
+                                                        Show();
+                                                        Activate();
+                                                        ishidden = false;
+                                                        notcont.Children.Remove(nt);
+                                                        posnotar();
+                                                        timeout.Stop();
+                                                    };
                                                     nt.closebtn.Click += (e, a) =>
 													{
 														notcont.Children.Remove(nt);
@@ -485,7 +518,7 @@ public partial class MainWindow : Window
 	{
         Avalonia.Platform.Screen cscreen = Screens.Primary;
         PixelRect bounds = cscreen.WorkingArea;
-        notar.Position = new PixelPoint(bounds.Right - 284, bounds.Bottom - (int)notar.Height);
+        
 		notar.MaxHeight = bounds.Height;
 		if (notcont.Children.Count == 0)
 		{
@@ -495,7 +528,8 @@ public partial class MainWindow : Window
         else
 		{
 			notar.Opacity = 1;
-		}
+            notar.Position = new PixelPoint(bounds.Right - 284, bounds.Bottom - (int)notar.Height);
+        }
     }
 
 	void loadconnectview()
@@ -704,6 +738,165 @@ public partial class MainWindow : Window
 				catch { }
 			});
         };
+		void lc(Dictionary<string, object> item)
+		{
+            JObject inf = (JObject)item["info"];
+            if (item["type"].ToString() == "user")
+            {
+                //ul.uname.Content = item["user"];
+                currentchatr = item["user"].ToString();
+            }
+            else if (item["type"].ToString() == "group")
+            {
+                //ul.uname.Content = item["group"];
+                currentchatr = item["group"].ToString();
+            }
+            mainv.chatarea.ilbl.Content = "";
+            if (selecteditm != null)
+            {
+                selecteditm.IsChecked = false;
+            }
+            if (chatslisttb[item["chatid"].ToString()].mtn.IsChecked == false)
+            {
+                chatslisttb[item["chatid"].ToString()].mtn.IsChecked = true;
+            }
+            mainv.chatarea.IsVisible = true;
+            Bitmap? pimg = null;
+            try
+            {
+                var task = ImageLoader.AsyncImageLoader.ProvideImageAsync(inf["picture"].ToString().Replace("%SERVER%", serverurl));
+                var cnting = task.ContinueWith((Task<Bitmap?> bt) =>
+                {
+                    var image = bt.Result;
+                    if (image != null)
+                    {
+                        pimg = image;
+                    }
+                });
+            }
+            catch { }
+            mainv.chatarea.chattitle.Content = inf["name"];
+            if (pimg != null)
+            {
+                mainv.chatarea.pfp.Source = pimg;
+            }
+            lastrecvmsg = "";
+            mainv.chatarea.chatmain.Children.Clear();
+            selecteditm = chatslisttb[item["chatid"].ToString()].mtn;
+
+            Debug.WriteLine(item["type"]);
+            if (item["type"].ToString() == "group")
+            {
+                StringContent sc = new(JsonConvert.SerializeObject(new { token = authinfo["token"], groupid = item["group"] }));
+                var task = mainclient.PostAsync(Path.Combine(serverurl, "getgroupuserscount"), sc);
+                task.ContinueWith((Task<HttpResponseMessage> httpTask) =>
+                {
+                    try
+                    {
+                        Task<string> task = httpTask.Result.Content.ReadAsStringAsync();
+                        Task continuation = task.ContinueWith(t =>
+                        {
+                            if (t.IsCompletedSuccessfully)
+                            {
+                                Dispatcher.UIThread.Post(() =>
+                                {
+
+                                    mainv.chatarea.ilbl.Content = t.Result + " Members";
+
+                                }, DispatcherPriority.Normal);
+                            }
+                        });
+                    }
+                    catch { }
+                });
+            }
+            else if (item["type"].ToString() == "user")
+            {
+                StringContent sc = new(JsonConvert.SerializeObject(new { token = authinfo["token"], uid = item["user"] }));
+                var task = mainclient.PostAsync(Path.Combine(serverurl, "getonline"), sc);
+                task.ContinueWith((Task<HttpResponseMessage> httpTask) =>
+                {
+                    try
+                    {
+                        Task<string> task = httpTask.Result.Content.ReadAsStringAsync();
+                        Task continuation = task.ContinueWith(t =>
+                        {
+                            if (t.IsCompletedSuccessfully)
+                            {
+                                Dispatcher.UIThread.Post(() =>
+                                {
+                                    if (t.Result == "Online")
+                                    {
+                                        chatslisttb[item["chatid"].ToString()].onlinedot.IsVisible = true;
+                                        mainv.chatarea.ilbl.Content = "Online";
+                                    }
+                                    else
+                                    {
+                                        chatslisttb[item["chatid"].ToString()].onlinedot.IsVisible = false;
+                                        try
+                                        {
+                                            DateTime dt = DateTime.ParseExact(t.Result, "MM dd yyyy, HH:mm zzz", CultureInfo.InvariantCulture);
+                                            if (dt.Date == DateTime.Now.Date)
+                                            {
+                                                mainv.chatarea.ilbl.Content = "Last Seen: " + addleading(dt.Hour) + ":" + addleading(dt.Minute);
+                                            }
+                                            else
+                                            {
+                                                mainv.chatarea.ilbl.Content = "Last Seen: " + dt.Year.ToString() + "/" + dt.Month.ToString() + "/" + dt.Day.ToString() + " " + addleading(dt.Hour) + ":" + addleading(dt.Minute);
+                                            }
+                                        }
+                                        catch { }
+                                    }
+                                }, DispatcherPriority.Normal);
+                            }
+                        });
+                    }
+                    catch { }
+                });
+            }
+
+            {
+                StringContent sc = new(JsonConvert.SerializeObject(new { token = authinfo["token"], chatid = item["chatid"].ToString(), page = 0 }));
+                var task = mainclient.PostAsync(Path.Combine(serverurl, "getchatpage"), sc);
+                task.ContinueWith((Task<HttpResponseMessage> httpTask) =>
+                {
+                    try
+                    {
+                        Task<string> task = httpTask.Result.Content.ReadAsStringAsync();
+                        Task continuation = task.ContinueWith(t =>
+                        {
+                            if (t.IsCompletedSuccessfully)
+                            {
+                                Dispatcher.UIThread.Post(() =>
+                                {
+                                    //try
+                                    //{
+                                    mainv.chatarea.msgkeys.Clear();
+                                    sl.Clear();
+                                    currentchatid = item["chatid"].ToString();
+                                    Dictionary<string, Dictionary<string, object>> result = JsonConvert.DeserializeObject<Dictionary<string, Dictionary<string, object>>>(t.Result);
+
+
+                                    foreach (KeyValuePair<string, Dictionary<string, object>> entry in result)
+                                    {
+                                        addmessage(entry.Key, entry.Value);
+                                        mainv.chatarea.chatmainscroll.ScrollToEnd();
+                                        lastrecvmsg = entry.Key;
+                                    }
+
+                                    //}
+                                    //catch { }
+
+                                }, DispatcherPriority.Background);
+                            }
+                        });
+                    }
+                    catch { }
+                });
+            }
+        }
+
+		loch = lc;
 
 		void loadchatslistitem()
 		{
@@ -713,7 +906,9 @@ public partial class MainWindow : Window
 				JObject inf = (JObject)item["info"];
 
 				ulistitem ul = new();
-				if (item.ContainsKey("lastmessage"))
+				chatslisttb[item["chatid"].ToString()] = ul;
+
+                if (item.ContainsKey("lastmessage"))
 				{
 					JObject lastmsg = (JObject)item["lastmessage"];
 					ul.mcontent.Content = lastmsg["content"].ToString();
@@ -752,145 +947,7 @@ public partial class MainWindow : Window
 				
 
 				ul.mtn.Click += (e, a) => {
-                    if (item["type"].ToString() == "user")
-                    {
-                        //ul.uname.Content = item["user"];
-                        currentchatr = item["user"].ToString();
-                    }
-                    else if (item["type"].ToString() == "group")
-                    {
-                        //ul.uname.Content = item["group"];
-                        currentchatr = item["group"].ToString();
-                    }
-                    mainv.chatarea.ilbl.Content = "";
-					if (selecteditm != null)
-					{
-						selecteditm.IsChecked = false;
-					}
-					if (ul.mtn.IsChecked == false)
-					{
-						ul.mtn.IsChecked = true;
-					}
-					mainv.chatarea.IsVisible = true;
-					mainv.chatarea.chattitle.Content = inf["name"];
-					if (pimg != null)
-					{
-						mainv.chatarea.pfp.Source = pimg;
-					}
-					lastrecvmsg = "";
-					mainv.chatarea.chatmain.Children.Clear();
-					selecteditm = ul.mtn;
-					
-					Debug.WriteLine(item["type"]);
-					if (item["type"].ToString() == "group")
-					{
-						StringContent sc = new(JsonConvert.SerializeObject(new { token = authinfo["token"], groupid = item["group"] }));
-						var task = mainclient.PostAsync(Path.Combine(serverurl, "getgroupuserscount"), sc);
-						task.ContinueWith((Task<HttpResponseMessage> httpTask) =>
-						{
-							try
-							{
-								Task<string> task = httpTask.Result.Content.ReadAsStringAsync();
-								Task continuation = task.ContinueWith(t =>
-								{
-									if (t.IsCompletedSuccessfully)
-									{
-										Dispatcher.UIThread.Post(() =>
-										{
-
-											mainv.chatarea.ilbl.Content = t.Result + " Members";
-
-										}, DispatcherPriority.Normal);
-									}
-								});
-							}
-							catch { }
-						});
-					}
-					else if (item["type"].ToString() == "user")
-					{
-						StringContent sc = new(JsonConvert.SerializeObject(new { token = authinfo["token"], uid = item["user"] }));
-						var task = mainclient.PostAsync(Path.Combine(serverurl, "getonline"), sc);
-						task.ContinueWith((Task<HttpResponseMessage> httpTask) =>
-						{
-							try
-							{
-								Task<string> task = httpTask.Result.Content.ReadAsStringAsync();
-								Task continuation = task.ContinueWith(t =>
-								{
-									if (t.IsCompletedSuccessfully)
-									{
-										Dispatcher.UIThread.Post(() =>
-										{
-											if (t.Result == "Online")
-											{
-												ul.onlinedot.IsVisible = true;
-												mainv.chatarea.ilbl.Content = "Online";
-											}
-											else
-											{
-												ul.onlinedot.IsVisible = false;
-												try
-												{
-													DateTime dt = DateTime.ParseExact(t.Result, "MM dd yyyy, HH:mm zzz", CultureInfo.InvariantCulture);
-													if (dt.Date == DateTime.Now.Date)
-													{
-														mainv.chatarea.ilbl.Content = "Last Seen: " + addleading(dt.Hour) + ":" + addleading(dt.Minute);
-													}
-													else
-													{
-														mainv.chatarea.ilbl.Content = "Last Seen: " + dt.Year.ToString() + "/" + dt.Month.ToString() + "/" + dt.Day.ToString() + " " + addleading(dt.Hour) + ":" + addleading(dt.Minute);
-													}
-												}
-												catch { }
-											}
-										}, DispatcherPriority.Normal);
-									}
-								});
-							}
-							catch { }
-						});
-					}
-                    
-                    {
-						StringContent sc = new(JsonConvert.SerializeObject(new { token = authinfo["token"], chatid = item["chatid"].ToString(), page = 0 }));
-						var task = mainclient.PostAsync(Path.Combine(serverurl, "getchatpage"), sc);
-						task.ContinueWith((Task<HttpResponseMessage> httpTask) =>
-						{
-							try
-							{
-								Task<string> task = httpTask.Result.Content.ReadAsStringAsync();
-								Task continuation = task.ContinueWith(t =>
-								{
-									if (t.IsCompletedSuccessfully)
-									{
-										Dispatcher.UIThread.Post(() =>
-										{
-                                            //try
-                                            //{
-                                            mainv.chatarea.msgkeys.Clear();
-											sl.Clear();
-                                            currentchatid = item["chatid"].ToString();
-                                            Dictionary<string, Dictionary<string, object>> result = JsonConvert.DeserializeObject<Dictionary<string, Dictionary<string, object>>>(t.Result);
-
-
-                                            foreach (KeyValuePair<string, Dictionary<string, object>> entry in result)
-                                            {
-												addmessage(entry.Key, entry.Value);
-												mainv.chatarea.chatmainscroll.ScrollToEnd();
-												lastrecvmsg = entry.Key;
-											}
-											
-											//}
-											//catch { }
-
-										}, DispatcherPriority.Background);
-									}
-								});
-							}
-							catch { }
-						});
-					}
+					lc(item);
                 };
 
 				mv.chatslist.Children.Add(ul);
@@ -1874,8 +1931,8 @@ public partial class MainWindow : Window
 							Border reactsbord = new() { CornerRadius = new CornerRadius(15), Height = 30, Background = Brushes.Gray, HorizontalAlignment = Avalonia.Layout.HorizontalAlignment.Left, Margin = new Thickness(4), BorderBrush = Brushes.DarkGray, BorderThickness = new Thickness(1), ClipToBounds = true };
 							Border ctbord = new() { CornerRadius = new CornerRadius(8), Background = Brushes.Gray, HorizontalAlignment = Avalonia.Layout.HorizontalAlignment.Left, Margin = new Thickness(4), BorderBrush = Brushes.DarkGray, BorderThickness = new Thickness(1), ClipToBounds = true };
                             StackPanel ca = new() { Orientation = Avalonia.Layout.Orientation.Vertical };
-							
-							Window vin = new();
+							iscontextmenu = true;
+                            Window vin = new();
 
                             TimeSpan ts = TimeSpan.FromMilliseconds(500);
 
@@ -1923,7 +1980,8 @@ public partial class MainWindow : Window
 							vin.Deactivated += (e, a) =>
 							{
 								vin.Close();
-							};
+                                iscontextmenu = false;
+                            };
 							vin.Closed += (e, a) => {
 								mainv.Focus();
 							};
