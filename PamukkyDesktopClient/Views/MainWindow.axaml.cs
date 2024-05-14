@@ -43,7 +43,7 @@ public partial class MainWindow : Window
 	string currentchatr = "";
     string[] reactions = ["👍", "👎", "😃", "😂", "👏", "😭", "💛", "🤔", "🎉"];
 	bool ishidden = false;
-	bool iscontextmenu = false;
+	bool isappwin = false;
 	bool shownotifications = true;
     IClipboard clipboard;
     Window notar = new();
@@ -107,7 +107,7 @@ public partial class MainWindow : Window
 			bool launchedforchat = false;
 
 			Deactivated += (e, a) => {
-				if (iscontextmenu)
+				if (isappwin)
 				{
                     ishidden = false;
                 }
@@ -498,8 +498,12 @@ public partial class MainWindow : Window
 
 		if (data.ContainsKey("logininfo"))
 		{
-			authinfo["token"] = ((JObject)data["logininfo"])["token"].ToString();
-			authinfo["uid"] = ((JObject)data["logininfo"])["uid"].ToString();
+			if (((JObject)data["logininfo"]).ContainsKey("token"))
+			{
+                authinfo["token"] = ((JObject)data["logininfo"])["token"].ToString();
+                authinfo["uid"] = ((JObject)data["logininfo"])["uid"].ToString();
+            }
+			
         }
 
 		shownotifications = (bool)data["shownotifications"];
@@ -761,7 +765,7 @@ public partial class MainWindow : Window
                 chatslisttb[item["chatid"].ToString()].mtn.IsChecked = true;
             }
             mainv.chatarea.IsVisible = true;
-            Bitmap? pimg = null;
+            mainv.chatarea.pfp.Source = null;
             try
             {
                 var task = ImageLoader.AsyncImageLoader.ProvideImageAsync(inf["picture"].ToString().Replace("%SERVER%", serverurl));
@@ -770,16 +774,15 @@ public partial class MainWindow : Window
                     var image = bt.Result;
                     if (image != null)
                     {
-                        pimg = image;
+						Dispatcher.UIThread.Post(() => mainv.chatarea.pfp.Source = image);
+                    }else
+					{
+                        
                     }
                 });
             }
             catch { }
             mainv.chatarea.chattitle.Content = inf["name"];
-            if (pimg != null)
-            {
-                mainv.chatarea.pfp.Source = pimg;
-            }
             lastrecvmsg = "";
             mainv.chatarea.chatmain.Children.Clear();
             selecteditm = chatslisttb[item["chatid"].ToString()].mtn;
@@ -1015,6 +1018,7 @@ public partial class MainWindow : Window
 
 			upe.logotbtn.Click += (a, e) => {
 				loadloginview();
+				authinfo.Clear();
 			};
 
 			Button closebtn = new() { Content = "Close" };
@@ -1931,7 +1935,7 @@ public partial class MainWindow : Window
 							Border reactsbord = new() { CornerRadius = new CornerRadius(15), Height = 30, Background = Brushes.Gray, HorizontalAlignment = Avalonia.Layout.HorizontalAlignment.Left, Margin = new Thickness(4), BorderBrush = Brushes.DarkGray, BorderThickness = new Thickness(1), ClipToBounds = true };
 							Border ctbord = new() { CornerRadius = new CornerRadius(8), Background = Brushes.Gray, HorizontalAlignment = Avalonia.Layout.HorizontalAlignment.Left, Margin = new Thickness(4), BorderBrush = Brushes.DarkGray, BorderThickness = new Thickness(1), ClipToBounds = true };
                             StackPanel ca = new() { Orientation = Avalonia.Layout.Orientation.Vertical };
-							iscontextmenu = true;
+							isappwin = true;
                             Window vin = new();
 
                             TimeSpan ts = TimeSpan.FromMilliseconds(500);
@@ -1980,7 +1984,7 @@ public partial class MainWindow : Window
 							vin.Deactivated += (e, a) =>
 							{
 								vin.Close();
-                                iscontextmenu = false;
+                                isappwin = false;
                             };
 							vin.Closed += (e, a) => {
 								mainv.Focus();
