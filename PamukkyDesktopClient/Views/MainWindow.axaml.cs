@@ -24,6 +24,8 @@ using Avalonia.Media;
 using System.Diagnostics;
 using Avalonia.Input.Platform;
 using Avalonia.Animation.Easings;
+using System.Net;
+using System.Runtime.InteropServices;
 
 namespace PamukkyDesktopClient.Views;
 
@@ -586,6 +588,27 @@ public partial class MainWindow : Window
 		};
 		switchviewwithalphatrans(cv);
 	}
+
+	void uploadfile(string path, Action<string> res)
+	{
+		byte[] file = File.ReadAllBytes(path);
+        WebClient client = new WebClient();
+        client.Credentials = CredentialCache.DefaultCredentials;
+        client.Encoding = System.Text.Encoding.UTF8;
+        client.Headers.Add("token", authinfo["token"]);
+        client.Headers.Add("content-length", file.Length.ToString());
+        client.Headers.Add("content-type", "File/" + Path.GetExtension(path).Replace(".", ""));
+        client.UploadDataAsync(new Uri(Path.Combine(serverurl,"upload")), "POST", file);
+		
+        client.UploadDataCompleted += (s, e) => {
+            string reply = JsonConvert.DeserializeObject<Dictionary<string, string>>(System.Text.Encoding.UTF8.GetString(e.Result))["url"];
+			
+			res(reply);
+            client.Dispose();
+        };
+        
+    }
+
 	void loadmainview()
 	{
 		onlinetmr.Start();
@@ -595,7 +618,39 @@ public partial class MainWindow : Window
 			mv.chatarea.replyid = null;
 			mv.chatarea.repdock.IsVisible = false;
 		};
-		int lastloadeditem = 0;
+		mv.chatarea.up.Click += (e, a) => {
+            OpenFileDialog filedialog = new();
+            filedialog.ShowAsync(this).ContinueWith((Task<string[]?> task) =>
+            {
+                Dispatcher.UIThread.InvokeAsync(() =>
+                {
+                    string[]? files = task.Result;
+                    if (files != null)
+                    {
+						uploaditm ui = new();
+						try
+						{
+							ui.img.Source = new Bitmap(files[0]);
+
+                        }
+                        catch { }
+                        mainv.chatarea.fuploads.Children.Add(ui);
+                        void afterupload(string url)
+						{
+                            mainv.chatarea.ufiles.Add(url);
+							ui.ul.IsVisible = false;
+							ui.rembtn.Click += (e, a) => {
+								mainv.chatarea.ufiles.Remove(url);
+                                mainv.chatarea.fuploads.Children.Remove(ui);
+                            };
+                        }
+                        uploadfile(files[0], afterupload);
+                    }
+                });
+            });
+        };
+
+        int lastloadeditem = 0;
 		mv.chatslistscroll.ScrollChanged += (e, a) =>
 		{
 			if (mv.chatslistscroll.Offset.Y > ((lastloadeditem - 1) * 60) - mv.chatslistscroll.Height)
@@ -960,7 +1015,7 @@ public partial class MainWindow : Window
 
 		void sendchatmessage(string msgcontent)
 		{
-			StringContent sc = new(JsonConvert.SerializeObject(new { token = authinfo["token"], chatid = currentchatid, content = msgcontent, replymsg = mainv.chatarea.replyid }));
+			StringContent sc = new(JsonConvert.SerializeObject(new { token = authinfo["token"], chatid = currentchatid, content = msgcontent, replymsg = mainv.chatarea.replyid, files = mainv.chatarea.ufiles }));
 			var task = mainclient.PostAsync(Path.Combine(serverurl, "sendmessage"), sc);
 			task.ContinueWith((Task<HttpResponseMessage> httpTask) =>
 			{
@@ -974,9 +1029,12 @@ public partial class MainWindow : Window
 
 				}
 			});
-			mv.chatarea.replyid = null;
+			mainv.chatarea.ufiles.Clear();
+
+            mv.chatarea.replyid = null;
 			mv.chatarea.repdock.IsVisible = false;
-		};
+			mainv.chatarea.fuploads.Children.Clear();
+        };
 
 		mv.chatarea.chattb.KeyDown += (a, b) => { 
 			if (b.Key == Avalonia.Input.Key.Enter)
@@ -987,7 +1045,7 @@ public partial class MainWindow : Window
 		};
 
 		mv.editpbtn.Click += (e, a) => {
-			string pfpurl = userprofile["picture"].Replace("%SERVER%", serverurl);
+			string pfpurl = userprofile["picture"];
 			normaldialog dg = new();
 			dg.ttl.Content = "Edit Profile";
 			userprofileedit upe = new();
@@ -1011,6 +1069,33 @@ public partial class MainWindow : Window
 			upe.pfp.PointerExited += (e, a) => {
 				upe.pfp.Opacity = 1;
 			};
+			upe.pfp.PointerReleased += (e, a) => {
+                OpenFileDialog filedialog = new();
+                filedialog.ShowAsync(this).ContinueWith((Task<string[]?> task) =>
+                {
+                    Dispatcher.UIThread.InvokeAsync(() =>
+                    {
+                        string[]? files = task.Result;
+                        if (files != null)
+                        {
+							
+                            try
+                            {
+                                upe.pfp.Source = new Bitmap(files[0]);
+
+                            }
+                            catch { }
+                            upe.elbl.Content = "Uploading...";
+                            void afterupload(string url)
+                            {
+								pfpurl = url;
+                                upe.elbl.Content = "Uploaded!";
+                            }
+                            uploadfile(files[0], afterupload);
+                        }
+                    });
+                });
+            };
 			upe.nametb.Text = userprofile["name"];
 			upe.biotb.Text = userprofile["description"];
 
@@ -1209,6 +1294,40 @@ public partial class MainWindow : Window
 					mv.maing.Children.Remove(dga);
 				};
 				dga.btnarea.Children.Add(closebtn);
+                cgd.img.PointerEntered += (e, a) => {
+                    cgd.img.Opacity = 0.7;
+                };
+
+                cgd.img.PointerExited += (e, a) => {
+                    cgd.img.Opacity = 1;
+                };
+                cgd.img.PointerReleased += (x, y) => {
+                    OpenFileDialog filedialog = new();
+                    filedialog.ShowAsync(this).ContinueWith((Task<string[]?> task) =>
+                    {
+                        Dispatcher.UIThread.InvokeAsync(() =>
+                        {
+                            string[]? files = task.Result;
+                            if (files != null)
+                            {
+
+                                try
+                                {
+                                    cgd.pfp.Source = new Bitmap(files[0]);
+
+                                }
+                                catch { }
+                                cgd.elbl.Content = "Uploading...";
+                                void afterupload(string url)
+                                {
+                                    gpic = url;
+                                    cgd.elbl.Content = "Uploaded!";
+                                }
+                                uploadfile(files[0], afterupload);
+                            }
+                        });
+                    });
+                }; 
 
 				Button createbtn = new() { Content = "Create" };
 				createbtn.Click += (e, a) => {
@@ -1474,16 +1593,19 @@ public partial class MainWindow : Window
 						{
 							Dispatcher.UIThread.Post(() =>
 							{
-								//try
+								try
 								{
 									chatslist = JsonConvert.DeserializeObject<List<Dictionary<string, object>>>(t.Result);
 									for (int i = 0; i < 20; i++)
 									{
 										loadchatslistitem();
 									}
-								}//catch {
-								//	Console.WriteLine(t.Result);
-								//}
+								}catch {
+									Dispatcher.UIThread.Post(() =>
+									{
+										loadloginview();
+									});
+								}
 							}, DispatcherPriority.Normal);
 						}
 						else
@@ -1779,7 +1901,7 @@ public partial class MainWindow : Window
 								mv.tick();
                             }else
 							{
-								Process.Start(file.Replace("%SERVER%", serverurl));
+                                OpenBrowser(file.Replace("%SERVER%", serverurl));
 							}
 							
 						};
@@ -2275,4 +2397,25 @@ public partial class MainWindow : Window
 		int decimalLength = 2;
 		return number.ToString("D" + decimalLength.ToString());
 	}
+
+    public static void OpenBrowser(string url)
+    {
+        if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+        {
+            url = url.Replace("&", "^&");
+            Process.Start(new ProcessStartInfo("cmd", $"/c start {url}") { CreateNoWindow = true });
+        }
+        else if (RuntimeInformation.IsOSPlatform(OSPlatform.Linux))
+        {
+            Process.Start("xdg-open", url);
+        }
+        else if (RuntimeInformation.IsOSPlatform(OSPlatform.OSX))
+        {
+            Process.Start("open", url);
+        }
+        else
+        {
+			//...
+		}
+    }
 }

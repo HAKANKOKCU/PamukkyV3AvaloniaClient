@@ -10,6 +10,7 @@ namespace PamukkyDesktopClient.Views
         public Dictionary<string, chatmsg> keymsgcont = new();
         public Dictionary<string, Dictionary<string, object>> keymsg = new();
         public string? replyid = null;
+        public List<string> ufiles = new();
         public chatarea()
         {
             InitializeComponent();
