@@ -318,7 +318,7 @@ public partial class MainWindow : Window
 														{
 															Dispatcher.UIThread.Post(() =>
 															{
-																ul.mcontent.Content = result["content"].ToString();
+																ul.mcontent.Content = result["content"].ToString().Split("\n")[0];
 																DateTime dt = DateTime.ParseExact(result["time"].ToString(), "MM dd yyyy, HH:mm zzz", CultureInfo.InvariantCulture);
 																if (dt.Date == DateTime.Now.Date)
 																{
@@ -625,7 +625,7 @@ public partial class MainWindow : Window
                 Dispatcher.UIThread.InvokeAsync(() =>
                 {
                     string[]? files = task.Result;
-                    if (files != null)
+                    if (files != null && files.Length != 0)
                     {
 						uploaditm ui = new();
 						try
@@ -969,7 +969,7 @@ public partial class MainWindow : Window
                 if (item.ContainsKey("lastmessage"))
 				{
 					JObject lastmsg = (JObject)item["lastmessage"];
-					ul.mcontent.Content = lastmsg["content"].ToString();
+					ul.mcontent.Content = lastmsg["content"].ToString().Split("\n")[0];
 					DateTime dt = DateTime.ParseExact(lastmsg["time"].ToString(), "MM dd yyyy, HH:mm zzz", CultureInfo.InvariantCulture);
 					if (dt.Date == DateTime.Now.Date)
 					{
@@ -1035,16 +1035,40 @@ public partial class MainWindow : Window
 			mv.chatarea.repdock.IsVisible = false;
 			mainv.chatarea.fuploads.Children.Clear();
         };
-
-		mv.chatarea.chattb.KeyDown += (a, b) => { 
-			if (b.Key == Avalonia.Input.Key.Enter)
+		bool isctrl = false;
+		mv.chatarea.chattb.KeyDown += (a, b) => {
+            if (b.Key == Avalonia.Input.Key.LeftCtrl)
+			{
+				isctrl = true;
+			}
+			if (b.Key == Avalonia.Input.Key.Enter && isctrl == false)
 			{
 				sendchatmessage(mv.chatarea.chattb.Text);
 				mv.chatarea.chattb.Text = "";
+				//b.Handled = false;
+			}
+            if (b.Key == Avalonia.Input.Key.Enter && isctrl == true)
+            {
+				try
+				{
+					int cindex = mv.chatarea.chattb.CaretIndex;
+
+					string text = mv.chatarea.chattb.Text;
+					string newtext = text.Substring(0, cindex) + "\n" + text.Substring(cindex);
+					mv.chatarea.chattb.Text = newtext;
+					mv.chatarea.chattb.CaretIndex = cindex + 1;
+				}catch { }
+            }
+        };
+
+		mv.chatarea.chattb.KeyUp += (a, b) =>
+		{
+			if (b.Key == Avalonia.Input.Key.LeftCtrl)
+			{
+				isctrl = false;
 			}
 		};
-
-		mv.editpbtn.Click += (e, a) => {
+        mv.editpbtn.Click += (e, a) => {
 			string pfpurl = userprofile["picture"];
 			normaldialog dg = new();
 			dg.ttl.Content = "Edit Profile";
@@ -1076,7 +1100,7 @@ public partial class MainWindow : Window
                     Dispatcher.UIThread.InvokeAsync(() =>
                     {
                         string[]? files = task.Result;
-                        if (files != null)
+                        if (files != null && files.Length != 0)
                         {
 							
                             try
@@ -1308,7 +1332,7 @@ public partial class MainWindow : Window
                         Dispatcher.UIThread.InvokeAsync(() =>
                         {
                             string[]? files = task.Result;
-                            if (files != null)
+                            if (files != null && files.Length != 0)
                             {
 
                                 try
@@ -2257,7 +2281,7 @@ public partial class MainWindow : Window
                                                             if (item.ContainsKey("lastmessage"))
                                                             {
                                                                 JObject lastmsg = (JObject)item["lastmessage"];
-                                                                ul.mcontent.Content = lastmsg["content"].ToString();
+                                                                ul.mcontent.Content = lastmsg["content"].ToString().Split("\n")[0];
                                                                 DateTime dt = DateTime.ParseExact(lastmsg["time"].ToString(), "MM dd yyyy, HH:mm zzz", CultureInfo.InvariantCulture);
                                                                 if (dt.Date == DateTime.Now.Date)
                                                                 {
