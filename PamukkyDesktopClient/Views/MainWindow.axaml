@@ -6,7 +6,7 @@
         xmlns:views="clr-namespace:PamukkyDesktopClient.Views"
         mc:Ignorable="d" d:DesignWidth="800" d:DesignHeight="450"
         x:Class="PamukkyDesktopClient.Views.MainWindow"
-        Icon="/Assets/avalonia-logo.ico"
+        Icon="/Assets/pamukky.ico"
         Title="Pamukky Desktop" TransparencyLevelHint="Transparent" WindowStartupLocation="CenterScreen">
-	<Label FontSize="30" HorizontalAlignment="Center"  VerticalAlignment="Center">Pamukky</Label>
+		<Label FontSize="30" HorizontalAlignment="Center"  VerticalAlignment="Center">Pamukky</Label>
 </Window>

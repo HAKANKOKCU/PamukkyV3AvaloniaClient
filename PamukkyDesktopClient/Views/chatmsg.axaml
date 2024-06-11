@@ -5,23 +5,26 @@
              mc:Ignorable="d" d:DesignWidth="400" d:DesignHeight="100"
              x:Class="PamukkyDesktopClient.Views.chatmsg">
 	<DockPanel LastChildFill="False" Name="maindock" Background="Transparent">
-		<Border Name="pfpborder" CornerRadius="14" ClipToBounds="True" Height="28" Margin="6,24,6,6" Background="Gray" VerticalAlignment="Top">
-			<Image Name="pfp" Width="28" Height="28"></Image>
+		<Border Name="pfpborder" CornerRadius="14" ClipToBounds="True" Height="28" Margin="6,24,6,6" Background="White" VerticalAlignment="Top">
+			<Image Name="pfp" Width="28" Height="28" Source="/Assets/person.png"></Image>
 		</Border>
 		<StackPanel Name="mainsp">
 			<Label Name="uname" FontSize="14">Name</Label>
-			<Border Name="msgbuble" Padding="4" CornerRadius="4">
-				<StackPanel>
-					<WrapPanel Name="filcont" Margin="5"></WrapPanel>
-					<StackPanel Name="repcont" Margin="5">
-						<Label Padding="2" Name="namerep" FontWeight="Bold">Name</Label>
-						<TextBlock Padding="2" Name="contrep">Content</TextBlock>
-					</StackPanel>
-					<StackPanel Name="msgcontent">
+			<Border Name="msgbuble" CornerRadius="4" ClipToBounds="true">
+				<Panel Name="bcont">
+					<StackPanel ZIndex="2" Margin="4">
+						<WrapPanel Name="filcont" Margin="5"></WrapPanel>
+						<StackPanel Name="repcont" Margin="5">
+							<Label Padding="2" Name="namerep" FontWeight="Bold">Name</Label>
+							<TextBlock Padding="2" Name="contrep">Content</TextBlock>
+						</StackPanel>
+						<StackPanel Name="msgcontent">
 
+						</StackPanel>
+						<WrapPanel Name="mreactions" Margin="5"></WrapPanel>
 					</StackPanel>
-					<WrapPanel Name="mreactions" Margin="5"></WrapPanel>
-				</StackPanel>
+				</Panel>
+				
 			</Border>
 			<Label FontSize="12" Name="mtime" HorizontalAlignment="Right">00:00</Label>
 			

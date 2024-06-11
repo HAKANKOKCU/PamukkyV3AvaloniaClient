@@ -53,6 +53,17 @@ public partial class MainWindow : Window
 	Dictionary<string, object> data = new();
 	Dictionary<string, ulistitem> chatslisttb = new();
 	Action<Dictionary<string, object>> loch;
+	Dictionary<String, Object> curole;
+	Dictionary<string, object> aalr = new() 
+				{
+					{ "AllowMessageDeleting", true },
+					{ "AllowEditingUsers", false },
+					{ "AllowEditingSettings", false },
+					{ "AllowKicking", false },
+					{ "AllowBanning", true },
+					{ "AllowSending", true },
+					{ "AllowSendingReactions", true },
+				};
 
     public MainWindow()
 	{
@@ -692,81 +703,224 @@ public partial class MainWindow : Window
 									});
 								}
 								catch { }
-								upe.pfp.PointerEntered += (e, a) =>
-								{
-									upe.pfp.Opacity = 0.7;
-								};
-
-								upe.pfp.PointerExited += (e, a) =>
-								{
-									upe.pfp.Opacity = 1;
-								};
+								
 								upe.nametb.Text = userprofile["name"];
 
 								if (isgroup)
 								{
-									upe.nametb.IsReadOnly = false;
-									upe.biotb.IsReadOnly = false;
+									upe.gid.Text = currentchatr;
 									upe.biotb.Text = userprofile["info"];
-									StringContent sc = new(JsonConvert.SerializeObject(new { token = authinfo["token"], groupid = currentchatr }));
-									var task = mainclient.PostAsync(Path.Combine(serverurl, "getgroupusers"), sc);
-									task.ContinueWith((Task<HttpResponseMessage> httpTask) =>
-									{
-										try
-										{
-											Task<string> task = httpTask.Result.Content.ReadAsStringAsync();
-											Task continuation = task.ContinueWith(t =>
-											{
-												if (t.IsCompletedSuccessfully)
-												{
-													Dispatcher.UIThread.Post(() =>
-													{
-														Dictionary<String,Dictionary<String, String>> users = JsonConvert.DeserializeObject<Dictionary<String, Dictionary<String, String>>>(t.Result);
-														foreach (KeyValuePair<string, Dictionary<string, string>> entry in users)
-														{
-															guserli u = new();
-															upe.usersarea.Children.Add(u);
-															StringContent sc = new(JsonConvert.SerializeObject(new { token = authinfo["token"], uid = entry.Value["user"] }));
-															var task = mainclient.PostAsync(Path.Combine(serverurl, "getuser"), sc);
-															task.ContinueWith((Task<HttpResponseMessage> httpTask) =>
-															{
-																try
-																{
-																	Task<string> task = httpTask.Result.Content.ReadAsStringAsync();
-																	Task continuation = task.ContinueWith(t =>
-																	{
-																		if (t.IsCompletedSuccessfully)
-																		{
-																			Dispatcher.UIThread.Post(() =>
+                                    StringContent sc = new(JsonConvert.SerializeObject(new { token = authinfo["token"], groupid = currentchatr }));
+                                    var task = mainclient.PostAsync(Path.Combine(serverurl, "getgrouproles"), sc);
+                                    task.ContinueWith((Task<HttpResponseMessage> httpTask) =>
+                                    {
+                                        try
+                                        {
+                                            Task<string> task = httpTask.Result.Content.ReadAsStringAsync();
+                                            Task continuation = task.ContinueWith(t =>
+                                            {
+                                                if (t.IsCompletedSuccessfully)
+                                                {
+                                                    Dispatcher.UIThread.Post(() =>
+                                                    {
+                                                        Dictionary<String, Dictionary<String, Object>> roles = JsonConvert.DeserializeObject<Dictionary<String, Dictionary<String, Object>>>(t.Result);
+                                                        StringContent sc = new(JsonConvert.SerializeObject(new { token = authinfo["token"], groupid = currentchatr }));
+                                                        var task = mainclient.PostAsync(Path.Combine(serverurl, "getgroupusers"), sc);
+                                                        task.ContinueWith((Task<HttpResponseMessage> httpTask) =>
+                                                        {
+                                                            try
+                                                            {
+                                                                Task<string> task = httpTask.Result.Content.ReadAsStringAsync();
+                                                                Task continuation = task.ContinueWith(t =>
+                                                                {
+                                                                    if (t.IsCompletedSuccessfully)
+                                                                    {
+                                                                        Dispatcher.UIThread.Post(() =>
+                                                                        {
+                                                                            Dictionary<String, Dictionary<String, String>> users = JsonConvert.DeserializeObject<Dictionary<String, Dictionary<String, String>>>(t.Result);
+																			Dictionary<String, String> cuser = users[authinfo["uid"]];
+																			Dictionary<String, Object> crole = roles[cuser["role"]];
+																			string pfpurl = userprofile["picture"];
+																			if ((bool)crole["AllowEditingSettings"] == true)
 																			{
-																				Dictionary<string, string> user = JsonConvert.DeserializeObject<Dictionary<string, string>>(t.Result);
-																				u.uname.Content = user["name"];
-                                                                                try
-                                                                                {
-                                                                                    var task = ImageLoader.AsyncImageLoader.ProvideImageAsync(user["picture"].Replace("%SERVER%", serverurl));
-                                                                                    var cnting = task.ContinueWith((Task<Bitmap?> bt) =>
-                                                                                    {
-                                                                                        var image = bt.Result;
-                                                                                        if (image != null)
-                                                                                        {
-                                                                                            Dispatcher.UIThread.Post(() => u.pfp.Source = image);
-                                                                                        }
-                                                                                    });
-                                                                                }
-                                                                                catch { }
-                                                                            });
-																		}
-																	});
-	
-																} catch { }
-															});
-														}
+                                                                                upe.nametb.IsReadOnly = false;
+                                                                                upe.biotb.IsReadOnly = false;
+																				upe.pfp.PointerEntered += (e, a) =>
+																				{
+																					upe.pfp.Opacity = 0.7;
+																				};
+
+																				upe.pfp.PointerExited += (e, a) =>
+																				{
+																					upe.pfp.Opacity = 1;
+																				};
+																				upe.pfp.PointerReleased += (e, a) => {
+																					OpenFileDialog filedialog = new();
+																					filedialog.ShowAsync(this).ContinueWith((Task<string[]?> task) =>
+																					{
+																						Dispatcher.UIThread.InvokeAsync(() =>
+																						{
+																							string[]? files = task.Result;
+																							if (files != null && files.Length != 0)
+																							{
+																								
+																								try
+																								{
+																									upe.pfp.Source = new Bitmap(files[0]);
+
+																								}
+																								catch { }
+																								upe.elbl.Content = "Uploading...";
+																								void afterupload(string url)
+																								{
+																									pfpurl = url;
+																									upe.elbl.Content = "Uploaded!";
+																								}
+																								uploadfile(files[0], afterupload);
+																							}
+																						});
+																					});
+																				};
+            
+																				Button savebtn = new() { Content = "Save" };
+																				savebtn.Click += (e, a) =>
+																				{
+																					mv.maing.Children.Remove(dg);
+																					StringContent sc = new(JsonConvert.SerializeObject(new { token = authinfo["token"], groupid = currentchatr, name = upe.nametb.Text, picture = pfpurl, info = upe.biotb.Text }));
+																					var task = mainclient.PostAsync(Path.Combine(serverurl, "editgroup"), sc);
+																				};
+																				dg.btnarea.Children.Add(savebtn);
+                                                                            }else {
+																				upe.nametb.IsReadOnly = true;
+                                                                                upe.biotb.IsReadOnly = true;
+																			}
+																			
+																			
+																			
+
+                                                                            foreach (KeyValuePair<string, Dictionary<string, string>> entry in users)
+                                                                            {
+																				//try {
+																					guserli u = new();
+																					if ((bool)crole["AllowEditingUsers"] == true)
+																					{
+																						ComboBox cb = new();
+																						foreach (KeyValuePair<string, Dictionary<string, object>> r in roles)
+																						{
+																							cb.Items.Add(r.Key);
+																						}
+																						cb.SelectedItem = entry.Value["role"];
+																						//bool isfirst = true;
+																						cb.SelectionChanged += (y,e) => {
+																							try {
+																								//if (isfirst) {
+																								//	
+																								//	isfirst = false;
+																								//	return;
+																								//}
+																								upe.elbl.Content = "Please Wait...";
+																								StringContent sc = new(JsonConvert.SerializeObject(new { token = authinfo["token"], groupid = currentchatr, userid = entry.Value["user"],role = cb.SelectedItem.ToString()}));
+																								var task = mainclient.PostAsync(Path.Combine(serverurl, "edituser"), sc);
+																								task.ContinueWith((Task<HttpResponseMessage> httpTask) =>
+																								{
+																									
+																										Task<string> task = httpTask.Result.Content.ReadAsStringAsync();
+																										Task continuation = task.ContinueWith(t =>
+																										{
+																											if (t.IsCompletedSuccessfully)
+																											{
+																												Dispatcher.UIThread.Post(() =>
+																												{
+																												
+																														Dictionary<string, string> result = JsonConvert.DeserializeObject<Dictionary<string, string>>(t.Result);
+																														if (result["status"] == "error")
+																														{
+																															
+																															upe.elbl.Content = result["description"];
+																															
+																														}
+																														else
+																														{
+																															
+																															upe.elbl.Content = "Done!";
+																															
+																														}
+																													
+																												}, DispatcherPriority.Normal);
+																											}
+																											else{
+																												Dispatcher.UIThread.Post(() =>
+																												{
+																													upe.elbl.Content = "Connection fail";
+																												}, DispatcherPriority.Normal);
+																											}
+																										});
+																									
+																									
+																								});
+																							}catch (Exception ex) {
+																								showerror(ex);
+																							}
+																						};
+																						u.rc.Children.Add(cb);
+																					}else {
+																						Label rl = new();
+																						rl.Content = entry.Value["role"];
+																						u.rc.Children.Add(rl);
+																					}
+																					upe.usersarea.Children.Add(u);
+																					StringContent sc = new(JsonConvert.SerializeObject(new { token = authinfo["token"], uid = entry.Value["user"] }));
+																					var task = mainclient.PostAsync(Path.Combine(serverurl, "getuser"), sc);
+																					task.ContinueWith((Task<HttpResponseMessage> httpTask) =>
+																					{
+																						try
+																						{
+																							Task<string> task = httpTask.Result.Content.ReadAsStringAsync();
+																							Task continuation = task.ContinueWith(t =>
+																							{
+																								if (t.IsCompletedSuccessfully)
+																								{
+																									Dispatcher.UIThread.Post(() =>
+																									{
+																										Dictionary<string, string> user = JsonConvert.DeserializeObject<Dictionary<string, string>>(t.Result);
+																										u.uname.Content = user["name"];
+																										try
+																										{
+																											var task = ImageLoader.AsyncImageLoader.ProvideImageAsync(user["picture"].Replace("%SERVER%", serverurl));
+																											var cnting = task.ContinueWith((Task<Bitmap?> bt) =>
+																											{
+																												var image = bt.Result;
+																												if (image != null)
+																												{
+																													Dispatcher.UIThread.Post(() => u.pfp.Source = image);
+																												}
+																											});
+																										}
+																										catch { }
+																									});
+																								}
+																							});
+
+																						}
+																						catch { }
+																					});
+																				//}catch (Exception e) {
+																				//	showerror(e);
+																				//}
+                                                                            }
+                                                                        });
+                                                                    };
+                                                                });
+                                                            }
+                                                            catch { }
+                                                        });
                                                     });
-												};
-											});
-										}
-										catch { }
-									});
+                                                };
+                                            });
+                                        }
+                                        catch { }
+                                    });
+                                    
 								}
 								else
 								{
@@ -845,31 +999,76 @@ public partial class MainWindow : Window
             Debug.WriteLine(item["type"]);
             if (item["type"].ToString() == "group")
             {
-                StringContent sc = new(JsonConvert.SerializeObject(new { token = authinfo["token"], groupid = item["group"] }));
-                var task = mainclient.PostAsync(Path.Combine(serverurl, "getgroupuserscount"), sc);
-                task.ContinueWith((Task<HttpResponseMessage> httpTask) =>
                 {
-                    try
-                    {
-                        Task<string> task = httpTask.Result.Content.ReadAsStringAsync();
-                        Task continuation = task.ContinueWith(t =>
-                        {
-                            if (t.IsCompletedSuccessfully)
-                            {
-                                Dispatcher.UIThread.Post(() =>
-                                {
+					StringContent sc = new(JsonConvert.SerializeObject(new { token = authinfo["token"], groupid = item["group"] }));
+					var task = mainclient.PostAsync(Path.Combine(serverurl, "getgroupuserscount"), sc);
+					task.ContinueWith((Task<HttpResponseMessage> httpTask) =>
+					{
+						try
+						{
+							Task<string> task = httpTask.Result.Content.ReadAsStringAsync();
+							Task continuation = task.ContinueWith(t =>
+							{
+								if (t.IsCompletedSuccessfully)
+								{
+									Dispatcher.UIThread.Post(() =>
+									{
 
-                                    mainv.chatarea.ilbl.Content = t.Result + " Members";
+										mainv.chatarea.ilbl.Content = t.Result + " Members";
 
-                                }, DispatcherPriority.Normal);
-                            }
-                        });
-                    }
-                    catch { }
-                });
+									}, DispatcherPriority.Normal);
+								}
+							});
+						}
+						catch { }
+					});
+				}
+				{
+					StringContent sc = new(JsonConvert.SerializeObject(new { token = authinfo["token"], groupid = currentchatr }));
+					var task = mainclient.PostAsync(Path.Combine(serverurl, "getgrouproles"), sc);
+					task.ContinueWith((Task<HttpResponseMessage> httpTask) =>
+					{
+						try
+						{
+							Task<string> task = httpTask.Result.Content.ReadAsStringAsync();
+							Task continuation = task.ContinueWith(t =>
+							{
+								if (t.IsCompletedSuccessfully)
+								{
+									Dispatcher.UIThread.Post(() =>
+									{
+										Dictionary<String, Dictionary<String, Object>> roles = JsonConvert.DeserializeObject<Dictionary<String, Dictionary<String, Object>>>(t.Result);
+										StringContent sc = new(JsonConvert.SerializeObject(new { token = authinfo["token"], groupid = currentchatr }));
+										var task = mainclient.PostAsync(Path.Combine(serverurl, "getgroupusers"), sc);
+										task.ContinueWith((Task<HttpResponseMessage> httpTask) =>
+										{
+											try
+											{
+												Task<string> task = httpTask.Result.Content.ReadAsStringAsync();
+												Task continuation = task.ContinueWith(t =>
+												{
+													if (t.IsCompletedSuccessfully)
+													{
+														Dispatcher.UIThread.Post(() =>
+														{
+															Dictionary<String, Dictionary<String, String>> users = JsonConvert.DeserializeObject<Dictionary<String, Dictionary<String, String>>>(t.Result);
+															Dictionary<String, String> cuser = users[authinfo["uid"]];
+															curole = roles[cuser["role"]];
+														});
+													}
+												});
+											}catch {}
+										});
+									});
+								}
+							});
+						}catch{}
+					});
+				}
             }
             else if (item["type"].ToString() == "user")
             {
+				curole = aalr;
                 StringContent sc = new(JsonConvert.SerializeObject(new { token = authinfo["token"], uid = item["user"] }));
                 var task = mainclient.PostAsync(Path.Combine(serverurl, "getonline"), sc);
                 task.ContinueWith((Task<HttpResponseMessage> httpTask) =>
@@ -2020,7 +2219,7 @@ public partial class MainWindow : Window
 					cmsg.repcont.IsVisible = false;
 				}
 				mainv.chatarea.keymsgcont[key] = cmsg;
-				TextBlock contlbl = new() { Text = msg["content"].ToString(), TextWrapping = TextWrapping.WrapWithOverflow };
+				SelectableTextBlock contlbl = new() { Text = msg["content"].ToString(), TextWrapping = TextWrapping.WrapWithOverflow };
 				if (msg["sender"].ToString() != "0")
 				{
 					cmsg.uname.Content = ((JObject)msg["senderuser"])["name"].ToString();
@@ -2061,7 +2260,7 @@ public partial class MainWindow : Window
 						cmsg.msgbuble.HorizontalAlignment = Avalonia.Layout.HorizontalAlignment.Center;
 
                     }
-					cmsg.msgbuble.Background = Brushes.Gray;
+					cmsg.bcont.Children.Add(new ListBox());
 				}
 				if (key != "0")
 				{
@@ -2078,8 +2277,8 @@ public partial class MainWindow : Window
                         {
                             StackPanel mn = new() { Orientation = Avalonia.Layout.Orientation.Vertical };
 
-							Border reactsbord = new() { CornerRadius = new CornerRadius(15), Height = 30, Background = Brushes.Gray, HorizontalAlignment = Avalonia.Layout.HorizontalAlignment.Left, Margin = new Thickness(4), BorderBrush = Brushes.DarkGray, BorderThickness = new Thickness(1), ClipToBounds = true };
-							Border ctbord = new() { CornerRadius = new CornerRadius(8), Background = Brushes.Gray, HorizontalAlignment = Avalonia.Layout.HorizontalAlignment.Left, Margin = new Thickness(4), BorderBrush = Brushes.DarkGray, BorderThickness = new Thickness(1), ClipToBounds = true };
+							Border reactsbord = new() { CornerRadius = new CornerRadius(15), Height = 30, HorizontalAlignment = Avalonia.Layout.HorizontalAlignment.Left, Margin = new Thickness(4), BorderBrush = Brushes.DarkGray, BorderThickness = new Thickness(1), ClipToBounds = true };
+							Border ctbord = new() { CornerRadius = new CornerRadius(8), HorizontalAlignment = Avalonia.Layout.HorizontalAlignment.Left, Margin = new Thickness(4), BorderBrush = Brushes.DarkGray, BorderThickness = new Thickness(1), ClipToBounds = true };
                             StackPanel ca = new() { Orientation = Avalonia.Layout.Orientation.Vertical };
 							isappwin = true;
                             Window vin = new();
@@ -2130,10 +2329,13 @@ public partial class MainWindow : Window
 							vin.Deactivated += (e, a) =>
 							{
 								vin.Close();
+								Activate();
+								Focus();
                                 isappwin = false;
                             };
 							vin.Closed += (e, a) => {
-								mainv.Focus();
+								Focus();
+								Activate();
 							};
 							vin.ExtendClientAreaToDecorationsHint = true;
 							vin.CanResize = false;
@@ -2147,20 +2349,30 @@ public partial class MainWindow : Window
 							vin.Show();
                             vin.Position = new PixelPoint((int)x, (int)y);
                             StackPanel recitm = new() { Orientation = Avalonia.Layout.Orientation.Horizontal };
-							reactsbord.Child = recitm;
-							ctbord.Child = ca;
-                            foreach (string i in reactions)
-                            {
-                                Button rct = new() { Content = i, Width = 30, Height = 30, Padding = new Thickness(0), HorizontalContentAlignment = Avalonia.Layout.HorizontalAlignment.Center, VerticalContentAlignment = Avalonia.Layout.VerticalAlignment.Center, Background = Brushes.Transparent };
-                               
-								recitm.Children.Add(rct);
-                                rct.Click += (e, a) => {
-                                    StringContent sc = new(JsonConvert.SerializeObject(new { token = authinfo["token"], chatid = currentchatid, msgid = key, reaction = i }));
-                                    var task = mainclient.PostAsync(Path.Combine(serverurl, "sendreaction"), sc);
-									vin.Close();
-                                };
-                            }
-                            mn.Children.Add(reactsbord);
+							Panel rp = new();
+							rp.Children.Add(new ListBox());
+							rp.Children.Add(recitm);
+							
+							Panel cp = new();
+							cp.Children.Add(new ListBox());
+							cp.Children.Add(ca);
+							reactsbord.Child = rp;
+							ctbord.Child = cp;
+							if ((bool)curole["AllowSendingReactions"] == true) {
+								foreach (string i in reactions)
+								{
+									Button rct = new() { Content = i, Width = 30, Height = 30, Padding = new Thickness(0), HorizontalContentAlignment = Avalonia.Layout.HorizontalAlignment.Center, VerticalContentAlignment = Avalonia.Layout.VerticalAlignment.Center, Background = Brushes.Transparent };
+								   
+									recitm.Children.Add(rct);
+									rct.Click += (e, a) => {
+										StringContent sc = new(JsonConvert.SerializeObject(new { token = authinfo["token"], chatid = currentchatid, msgid = key, reaction = i }));
+										var task = mainclient.PostAsync(Path.Combine(serverurl, "sendreaction"), sc);
+										vin.Close();
+									};
+								}
+								
+								mn.Children.Add(reactsbord);
+							}
                             mn.Children.Add(ctbord);
 
 
@@ -2442,4 +2654,14 @@ public partial class MainWindow : Window
 			//...
 		}
     }
+	
+	public void showerror(Exception e) {
+		Window w = new();
+		w.Title = "An error occurred!";
+		ScrollViewer s = new() {HorizontalScrollBarVisibility = ScrollBarVisibility.Auto};
+		SelectableTextBlock tb = new() {Text = e.ToString()};
+		s.Content = tb;
+		w.Content = s;
+		w.Show();
+	}
 }

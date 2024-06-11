@@ -41,7 +41,7 @@
 							<Button Content="Upload" Name="up"></Button>
 							
 							<ScrollViewer MaxHeight="280" VerticalScrollBarVisibility="Auto">
-								<TextBox CornerRadius="20" VerticalContentAlignment="Center" MinHeight="40" TextWrapping="Wrap" Name="chattb" Background="Transparent" VerticalAlignment="Center" BorderThickness="0">
+								<TextBox Text="" Watermark="Write a message..." CornerRadius="20" VerticalContentAlignment="Center" MinHeight="40" TextWrapping="Wrap" Name="chattb" Background="Transparent" VerticalAlignment="Center" BorderThickness="0">
 									<TextBox.Styles>
 										<Style Selector="TextBox:pointerover">
 											<Setter Property="Background" Value="Transparent"/>
