@@ -26,6 +26,7 @@ using Avalonia.Input.Platform;
 using Avalonia.Animation.Easings;
 using System.Net;
 using System.Runtime.InteropServices;
+using System.Web;
 
 namespace PamukkyDesktopClient.Views;
 
@@ -608,6 +609,7 @@ public partial class MainWindow : Window
         client.Encoding = System.Text.Encoding.UTF8;
         client.Headers.Add("token", authinfo["token"]);
         client.Headers.Add("content-length", file.Length.ToString());
+        client.Headers.Add("filename", HttpUtility.UrlEncode(Path.GetFileName(path)));
         client.Headers.Add("content-type", "File/" + Path.GetExtension(path).Replace(".", ""));
         client.UploadDataAsync(new Uri(Path.Combine(serverurl,"upload")), "POST", file);
 		
@@ -2095,15 +2097,18 @@ public partial class MainWindow : Window
 
                 if (msg.ContainsKey("files"))
 				{
-					foreach (string file in (Newtonsoft.Json.Linq.JArray)msg["files"])
+					
+					
+					foreach (JObject file in (Newtonsoft.Json.Linq.JArray)msg["gImages"])
 					{
+						cmsg.imgcont.IsVisible = true;
 						Border fc = new() { ClipToBounds = true, Width = 100, Height = 100, CornerRadius = new CornerRadius(8), Margin = new Thickness(2), Background = Brushes.Gray};
 						Image img = new() { Width = 100, Height = 100 };
 						fc.Child = img;
 						Bitmap? imga = null;
                         try
                         {
-                            var task = ImageLoader.AsyncImageLoader.ProvideImageAsync(file.Replace("%SERVER%", serverurl));
+                            var task = ImageLoader.AsyncImageLoader.ProvideImageAsync(file["url"].ToString().Replace("%SERVER%", serverurl));
                             var cnting = task.ContinueWith((Task<Bitmap?> bt) =>
                             {
                                 var image = bt.Result;
@@ -2124,11 +2129,28 @@ public partial class MainWindow : Window
 								mv.tick();
                             }else
 							{
-                                OpenBrowser(file.Replace("%SERVER%", serverurl));
+                                OpenBrowser(file["url"].ToString().Replace("%SERVER%", serverurl));
 							}
 							
 						};
-                        cmsg.filcont.Children.Add(fc);
+                        cmsg.imgcont.Children.Add(fc);
+					}
+					foreach (JObject file in (Newtonsoft.Json.Linq.JArray)msg["gFiles"])
+					{
+						cmsg.filecont.IsVisible = true;
+						fileitm fc = new();
+						fc.HorizontalAlignment = Avalonia.Layout.HorizontalAlignment.Stretch;
+						fc.fn.Text = file["name"].ToString();
+						try {
+							fc.sz.Content = getfilesize((double)file["size"]);
+						}catch {
+							fc.sz.Content = "Unknown Size.";
+						}
+						
+						((Button)fc.Content).Click += (e, a) => {
+							OpenBrowser(file["url"].ToString().Replace("%SERVER%", serverurl));
+						};
+                        cmsg.filecont.Children.Add(fc);
 					}
 				}
                 if (msg.ContainsKey("reactions"))
@@ -2663,5 +2685,17 @@ public partial class MainWindow : Window
 		s.Content = tb;
 		w.Content = s;
 		w.Show();
+	}
+	string getfilesize(double len) {
+		string[] sizes = { "B", "KB", "MB", "GB", "TB" };
+		int order = 0;
+		while (len >= 1024 && order < sizes.Length - 1) {
+			order++;
+			len = len/1024;
+		}
+
+		// Adjust the format string to your preferences. For example "{0:0.#}{1}" would
+		// show a single decimal place, and no space.
+		return String.Format("{0:0.##} {1}", len, sizes[order]);
 	}
 }
