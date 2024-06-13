@@ -5,7 +5,7 @@
              mc:Ignorable="d" d:DesignWidth="400" d:DesignHeight="60"
              x:Class="PamukkyDesktopClient.Views.ulistitem">
 	<ToggleButton Name="mtn" HorizontalAlignment="Stretch" Padding="0" Background="Transparent">
-		<DockPanel>
+		<DockPanel Height="60">
 			<Panel>
 				<Border CornerRadius="40" ClipToBounds="True" Height="40" Margin="3" Background="Gray">
 					<Image Name="pfp" Width="40" Height="40"></Image>

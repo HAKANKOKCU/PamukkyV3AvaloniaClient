@@ -103,6 +103,7 @@ public partial class MainWindow : Window
             showpamukky.Click += (e, a) =>
             {
                 Show();
+				Activate();
 				ishidden = false;
             };
             recvtotifs.Click += (e, a) =>
@@ -297,119 +298,119 @@ public partial class MainWindow : Window
 							}
 						});
 					}
-					int citemscountvis = (int)(this.Height / 60);
-					int startitm = (int)(mainv.chatslistscroll.Offset.Y / 60);
-					int enditm = (startitm + citemscountvis > chatslist.Count ? chatslist.Count : startitm + citemscountvis);
-					//System.Diagnostics.Debug.WriteLine(startitm);
-					//System.Diagnostics.Debug.WriteLine(citemscountvis);
-					//System.Diagnostics.Debug.WriteLine(enditm);
-					for (int i = startitm; i < enditm; i++)
-					{
-						try
-						{
-							ulistitem ul = (ulistitem)mainv.chatslist.Children[i];
-							string chatid = chatslist[i]["chatid"].ToString();
-							{
-								StringContent sc = new(JsonConvert.SerializeObject(new { token = authinfo["token"], chatid = chatslist[i]["chatid"] }));
-								var task = mainclient.PostAsync(Path.Combine(serverurl, "getlastmessage"), sc);
-								task.ContinueWith((Task<HttpResponseMessage> httpTask) =>
-								{
-									try
-									{
-										Task<string> task = httpTask.Result.Content.ReadAsStringAsync();
-										Task continuation = task.ContinueWith(t =>
-										{
-											if (t.IsCompletedSuccessfully)
-											{
-												Dispatcher.UIThread.Post(() =>
-												{
-													Dictionary<string, object> result = JsonConvert.DeserializeObject<Dictionary<string, object>>(t.Result);
-													if (result != null)
-													{
-														if (!(result.ContainsKey("status") && result["status"].ToString() == "error"))
-														{
-															Dispatcher.UIThread.Post(() =>
-															{
-																ul.mcontent.Content = result["content"].ToString().Split("\n")[0];
-																DateTime dt = DateTime.ParseExact(result["time"].ToString(), "MM dd yyyy, HH:mm zzz", CultureInfo.InvariantCulture);
-																if (dt.Date == DateTime.Now.Date)
-																{
-																	ul.mtime.Content = addleading(dt.Hour) + ":" + addleading(dt.Minute);
-																}
-																else
-																{
-																	ul.mtime.Content = dt.Year.ToString() + "/" + dt.Month.ToString() + "/" + dt.Day.ToString() + " " + addleading(dt.Hour) + ":" + addleading(dt.Minute);
-
-																}
-															}, DispatcherPriority.Normal);
-														}
-													}
-												}, DispatcherPriority.Normal);
-											}
-										});
-									}
-									catch { }
-								});
-							}
-
-
-
-							
-
-							if (chatslist[i]["type"].ToString() == "user")
-							{
-								string uid = chatslist[i]["user"].ToString();
-								StringContent sc = new(JsonConvert.SerializeObject(new { token = authinfo["token"], uid = uid }));
-								var task = mainclient.PostAsync(Path.Combine(serverurl, "getonline"), sc);
-								task.ContinueWith((Task<HttpResponseMessage> httpTask) =>
-								{
-									try
-									{
-										Task<string> task = httpTask.Result.Content.ReadAsStringAsync();
-										Task continuation = task.ContinueWith(t =>
-										{
-											if (t.IsCompletedSuccessfully)
-											{
-												Dispatcher.UIThread.Post(() =>
-												{
-													if (t.Result == "Online")
-													{
-														ul.onlinedot.IsVisible = true;
-														if (currentchatid == chatid)
-														{
-															mainv.chatarea.ilbl.Content = "Online";
-														}
-													}
-													else
-													{
-														ul.onlinedot.IsVisible = false;
-														if (currentchatid == chatid)
-														{
-															try
-															{
-																DateTime dt = DateTime.ParseExact(t.Result, "MM dd yyyy, HH:mm zzz", CultureInfo.InvariantCulture);
-																if (dt.Date == DateTime.Now.Date)
-																{
-																	mainv.chatarea.ilbl.Content = "Last Seen: " + addleading(dt.Hour) + ":" + addleading(dt.Minute);
-																}
-																else
-																{
-																	mainv.chatarea.ilbl.Content = "Last Seen: " + dt.Year.ToString() + "/" + dt.Month.ToString() + "/" + dt.Day.ToString() + " " + addleading(dt.Hour) + ":" + addleading(dt.Minute);
-																}
-															}
-															catch { }
-														}
-													}
-												}, DispatcherPriority.Normal);
-											}
-										});
-									}
-									catch { }
-								});
-							}
-						}
-						catch { }
-					};
+					//int citemscountvis = (int)(this.Height / 60);
+					//int startitm = (int)((mainv.chatslistscroll.Offset.Y - 60) / 60);
+					//int enditm = (startitm + citemscountvis > chatslist.Count ? chatslist.Count : startitm + citemscountvis);
+					////System.Diagnostics.Debug.WriteLine(startitm);
+					////System.Diagnostics.Debug.WriteLine(citemscountvis);
+					////System.Diagnostics.Debug.WriteLine(enditm);
+					//for (int i = startitm; i < enditm; i++)
+					//{
+					//	try
+					//	{
+					//		ulistitem ul = (ulistitem)mainv.chatslist.Children[i];
+					//		string chatid = chatslist[i]["chatid"].ToString();
+					//		{
+					//			StringContent sc = new(JsonConvert.SerializeObject(new { token = authinfo["token"], chatid = chatslist[i]["chatid"] }));
+					//			var task = mainclient.PostAsync(Path.Combine(serverurl, "getlastmessage"), sc);
+					//			task.ContinueWith((Task<HttpResponseMessage> httpTask) =>
+					//			{
+					//				try
+					//				{
+					//					Task<string> task = httpTask.Result.Content.ReadAsStringAsync();
+					//					Task continuation = task.ContinueWith(t =>
+					//					{
+					//						if (t.IsCompletedSuccessfully)
+					//						{
+					//							Dispatcher.UIThread.Post(() =>
+					//							{
+					//								Dictionary<string, object> result = JsonConvert.DeserializeObject<Dictionary<string, object>>(t.Result);
+					//								if (result != null)
+					//								{
+					//									if (!(result.ContainsKey("status") && result["status"].ToString() == "error"))
+					//									{
+					//										Dispatcher.UIThread.Post(() =>
+					//										{
+					//											ul.mcontent.Content = result["content"].ToString().Split("\n")[0];
+					//											DateTime dt = DateTime.ParseExact(result["time"].ToString(), "MM dd yyyy, HH:mm zzz", CultureInfo.InvariantCulture);
+					//											if (dt.Date == DateTime.Now.Date)
+					//											{
+					//												ul.mtime.Content = addleading(dt.Hour) + ":" + addleading(dt.Minute);
+					//											}
+					//											else
+					//											{
+					//												ul.mtime.Content = dt.Year.ToString() + "/" + dt.Month.ToString() + "/" + dt.Day.ToString() + " " + addleading(dt.Hour) + ":" + addleading(dt.Minute);
+					//
+					//											}
+					//										}, DispatcherPriority.Normal);
+					//									}
+					//								}
+					//							}, DispatcherPriority.Normal);
+					//						}
+					//					});
+					//				}
+					//				catch { }
+					//			});
+					//		}
+					//
+					//
+					//
+					//		
+					//
+					//		if (chatslist[i]["type"].ToString() == "user")
+					//		{
+					//			string uid = chatslist[i]["user"].ToString();
+					//			StringContent sc = new(JsonConvert.SerializeObject(new { token = authinfo["token"], uid = uid }));
+					//			var task = mainclient.PostAsync(Path.Combine(serverurl, "getonline"), sc);
+					//			task.ContinueWith((Task<HttpResponseMessage> httpTask) =>
+					//			{
+					//				try
+					//				{
+					//					Task<string> task = httpTask.Result.Content.ReadAsStringAsync();
+					//					Task continuation = task.ContinueWith(t =>
+					//					{
+					//						if (t.IsCompletedSuccessfully)
+					//						{
+					//							Dispatcher.UIThread.Post(() =>
+					//							{
+					//								if (t.Result == "Online")
+					//								{
+					//									ul.onlinedot.IsVisible = true;
+					//									if (currentchatid == chatid)
+					//									{
+					//										mainv.chatarea.ilbl.Content = "Online";
+					//									}
+					//								}
+					//								else
+					//								{
+					//									ul.onlinedot.IsVisible = false;
+					//									if (currentchatid == chatid)
+					//									{
+					//										try
+					//										{
+					//											DateTime dt = DateTime.ParseExact(t.Result, "MM dd yyyy, HH:mm zzz", CultureInfo.InvariantCulture);
+					//											if (dt.Date == DateTime.Now.Date)
+					//											{
+					//												mainv.chatarea.ilbl.Content = "Last Seen: " + addleading(dt.Hour) + ":" + addleading(dt.Minute);
+					//											}
+					//											else
+					//											{
+					//												mainv.chatarea.ilbl.Content = "Last Seen: " + dt.Year.ToString() + "/" + dt.Month.ToString() + "/" + dt.Day.ToString() + " " + addleading(dt.Hour) + ":" + addleading(dt.Minute);
+					//											}
+					//										}
+					//										catch { }
+					//									}
+					//								}
+					//							}, DispatcherPriority.Normal);
+					//						}
+					//					});
+					//				}
+					//				catch { }
+					//			});
+					//		}
+					//	}
+					//	catch { }
+					//};
 				};
 			};
 			mainclient = new HttpClient();
@@ -1800,9 +1801,16 @@ public partial class MainWindow : Window
 				}
 			});
 		}
+		
 		loadprofinfo();
 		void loadchats() {
+
 			mv.chatslist.Children.Clear();
+			Button refbtn = new() {Content = "Refresh"};
+			refbtn.Click += (e,a) => {
+				loadchats();
+			};
+			mv.chatslist.Children.Add(refbtn);
 			selecteditm = null;
 			lastloadeditem = 0;
 			StringContent sc = new(JsonConvert.SerializeObject(new { token = authinfo["token"] }));
@@ -1955,7 +1963,7 @@ public partial class MainWindow : Window
 									Dictionary<string, object> result = JsonConvert.DeserializeObject<Dictionary<string, object>>(t.Result);
 									if (result.ContainsKey("status") && result["status"].ToString() == "error")
 									{
-										lv.elbl.Content = result["message"];
+										lv.elbl.Content = result["description"];
 										lv.lbtn.IsEnabled = true;
 										lv.rbtn.IsEnabled = true;
 										lv.emailtb.IsEnabled = true;
@@ -1967,6 +1975,7 @@ public partial class MainWindow : Window
 										ai["token"] = result["token"].ToString();
 										ai["uid"] = result["uid"].ToString();
 										authinfo = ai;
+										loadmainview();
 									}
 								}, DispatcherPriority.Normal);
 							}
@@ -2127,6 +2136,8 @@ public partial class MainWindow : Window
                                 mv.Show();
                                 mv.image.Source = imga;
 								mv.tick();
+								
+								mv.Activate();
                             }else
 							{
                                 OpenBrowser(file["url"].ToString().Replace("%SERVER%", serverurl));
@@ -2241,7 +2252,7 @@ public partial class MainWindow : Window
 					cmsg.repcont.IsVisible = false;
 				}
 				mainv.chatarea.keymsgcont[key] = cmsg;
-				SelectableTextBlock contlbl = new() { Text = msg["content"].ToString(), TextWrapping = TextWrapping.WrapWithOverflow };
+				
 				if (msg["sender"].ToString() != "0")
 				{
 					cmsg.uname.Content = ((JObject)msg["senderuser"])["name"].ToString();
@@ -2265,8 +2276,10 @@ public partial class MainWindow : Window
                     cmsg.mtime.IsVisible = false;
 
                 }
-                
-				cmsg.msgcontent.Children.Add(contlbl);
+				if (msg["content"].ToString().Length > 0) {
+					SelectableTextBlock contlbl = new() { Text = msg["content"].ToString(), TextWrapping = TextWrapping.WrapWithOverflow };
+					cmsg.msgcontent.Children.Add(contlbl);
+				}
 				mainv.chatarea.chatmain.Children.Add(cmsg);
 				Dock dval = Dock.Left;
 				if (msg["sender"].ToString() == authinfo["uid"])

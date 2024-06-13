@@ -16,8 +16,15 @@
 					MaterialOpacity="0.65" />
 			</ExperimentalAcrylicBorder.Material>
 		</ExperimentalAcrylicBorder>
-		<DockPanel DockPanel.Dock="Top" Background="#80000000" Height="32" ZIndex="10">
-			<Button Name="closebtn" Foreground="White" DockPanel.Dock="Right">Close</Button>
+		<DockPanel DockPanel.Dock="Top" Background="#80000000" Height="32" ZIndex="10" Name="tb">
+			<StackPanel Orientation="Horizontal" DockPanel.Dock="Right">
+				<Button Name="mxbtn" Foreground="White">
+					<PathIcon Data="{StaticResource window_multiple_regular}" Width="12" Height="12" Margin="2"/>
+				</Button>
+				<Button Name="closebtn" Foreground="White">x</Button>
+			</StackPanel>
+			
+			
 			<Label HorizontalContentAlignment="Center" Foreground="White" VerticalAlignment="Center">Image</Label>
 		</DockPanel>
 		<Canvas Name="cv">
