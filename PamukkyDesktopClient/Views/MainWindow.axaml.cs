@@ -1057,6 +1057,11 @@ public partial class MainWindow : Window
 															Dictionary<String, Dictionary<String, String>> users = JsonConvert.DeserializeObject<Dictionary<String, Dictionary<String, String>>>(t.Result);
 															Dictionary<String, String> cuser = users[authinfo["uid"]];
 															curole = roles[cuser["role"]];
+															if ((bool)curole["AllowSending"] == true) {
+																mv.chatarea.chatbarborder.IsVisible = true;												
+															}else {
+																mv.chatarea.chatbarborder.IsVisible = false;
+															}
 														});
 													}
 												});
@@ -1072,6 +1077,7 @@ public partial class MainWindow : Window
             else if (item["type"].ToString() == "user")
             {
 				curole = aalr;
+				mv.chatarea.chatbarborder.IsVisible = true;
                 StringContent sc = new(JsonConvert.SerializeObject(new { token = authinfo["token"], uid = item["user"] }));
                 var task = mainclient.PostAsync(Path.Combine(serverurl, "getonline"), sc);
                 task.ContinueWith((Task<HttpResponseMessage> httpTask) =>
@@ -1114,7 +1120,7 @@ public partial class MainWindow : Window
                     catch { }
                 });
             }
-
+			
             {
                 StringContent sc = new(JsonConvert.SerializeObject(new { token = authinfo["token"], chatid = item["chatid"].ToString(), page = 0 }));
                 var task = mainclient.PostAsync(Path.Combine(serverurl, "getchatpage"), sc);
@@ -2285,7 +2291,7 @@ public partial class MainWindow : Window
 				if (msg["sender"].ToString() == authinfo["uid"])
 				{
 					dval = Dock.Right;
-					cmsg.msgbuble.Background = new SolidColorBrush(this.PlatformSettings.GetColorValues().AccentColor1);
+					cmsg.msgbuble.Background = Brushes.Orange;
 				}
 				else
 				{ 
@@ -2410,17 +2416,18 @@ public partial class MainWindow : Window
 							}
                             mn.Children.Add(ctbord);
 
-
-                            Button repitm = new() { Content = "Reply", Background = Brushes.Transparent, HorizontalAlignment = Avalonia.Layout.HorizontalAlignment.Stretch };
-                            repitm.Click += (e, a) =>
-                            {
-                                mainv.chatarea.replyid = key;
-                                mainv.chatarea.senderrep.Content = ((JObject)msg["senderuser"])["name"].ToString();
-                                mainv.chatarea.contentrep.Content = msg["content"].ToString();
-                                mainv.chatarea.repdock.IsVisible = true;
-                                vin.Close();
-                            };
-                            ca.Children.Add(repitm);
+							if ((bool)curole["AllowSending"]) {
+								Button repitm = new() { Content = "Reply", Background = Brushes.Transparent, HorizontalAlignment = Avalonia.Layout.HorizontalAlignment.Stretch };
+								repitm.Click += (e, a) =>
+								{
+									mainv.chatarea.replyid = key;
+									mainv.chatarea.senderrep.Content = ((JObject)msg["senderuser"])["name"].ToString();
+									mainv.chatarea.contentrep.Content = msg["content"].ToString();
+									mainv.chatarea.repdock.IsVisible = true;
+									vin.Close();
+								};
+								ca.Children.Add(repitm);
+							}
 
                             Button saveitm = new() { Content = "Save Message", Background = Brushes.Transparent, HorizontalAlignment = Avalonia.Layout.HorizontalAlignment.Stretch };
                             saveitm.Click += (e, a) =>
@@ -2600,42 +2607,43 @@ public partial class MainWindow : Window
                                 else
                                 {
                                     sl.Add(key);
-                                    cmsg.Background = new SolidColorBrush(this.PlatformSettings.GetColorValues().AccentColor1);
+                                    cmsg.Background = Brushes.Orange;
                                 }
                             };
                             ca.Children.Add(msi);
+							if ((bool)curole["AllowMessageDeleting"] || msg["sender"].ToString() == authinfo["uid"]) {
+								Button delitm = new() { Content = "Delete", Background = Brushes.Transparent, HorizontalAlignment = Avalonia.Layout.HorizontalAlignment.Stretch };
+								delitm.Click += (e, a) =>
+								{
+									vin.Close();
+									if (sl.Count == 0)
+									{
+										sl.Add(key);
+									}
+									foreach (string id in sl)
+									{
+										StringContent sc = new(JsonConvert.SerializeObject(new { token = authinfo["token"], chatid = currentchatid, msgid = id }));
+										var task = mainclient.PostAsync(Path.Combine(serverurl, "deletemessage"), sc);
+										task.ContinueWith((Task<HttpResponseMessage> httpTask) =>
+										{
+											try
+											{
 
-                            Button delitm = new() { Content = "Delete", Background = Brushes.Transparent, HorizontalAlignment = Avalonia.Layout.HorizontalAlignment.Stretch };
-                            delitm.Click += (e, a) =>
-                            {
-                                vin.Close();
-                                if (sl.Count == 0)
-                                {
-                                    sl.Add(key);
-                                }
-                                foreach (string id in sl)
-                                {
-                                    StringContent sc = new(JsonConvert.SerializeObject(new { token = authinfo["token"], chatid = currentchatid, msgid = id }));
-                                    var task = mainclient.PostAsync(Path.Combine(serverurl, "deletemessage"), sc);
-                                    task.ContinueWith((Task<HttpResponseMessage> httpTask) =>
-                                    {
-                                        try
-                                        {
+												Task<string> task = httpTask.Result.Content.ReadAsStringAsync();
+												Task continuation = task.ContinueWith(t => { });
 
-                                            Task<string> task = httpTask.Result.Content.ReadAsStringAsync();
-                                            Task continuation = task.ContinueWith(t => { });
+											}
+											catch
+											{
 
-                                        }
-                                        catch
-                                        {
+											}
+										});
+									}
+									sl.Clear();
 
-                                        }
-                                    });
-                                }
-                                sl.Clear();
-
-                            };
-                            ca.Children.Add(delitm);
+								};
+								ca.Children.Add(delitm);
+							}
                         }else
 						{
                             if (sl.Count > 0)
@@ -2647,7 +2655,7 @@ public partial class MainWindow : Window
                                 else
                                 {
                                     sl.Add(key);
-                                    cmsg.Background = new SolidColorBrush(this.PlatformSettings.GetColorValues().AccentColor1);
+                                    cmsg.Background = Brushes.Orange;
                                 }
                         }
                     };

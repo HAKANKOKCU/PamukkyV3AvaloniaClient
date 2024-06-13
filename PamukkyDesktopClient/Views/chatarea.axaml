@@ -37,7 +37,7 @@
 							<StackPanel Orientation="Horizontal" Name="fuploads"></StackPanel>
 						</ScrollViewer>
 						
-						<DockPanel>
+						<DockPanel Name="mbox">
 							<Button Name="up" Background="Transparent">
 								<PathIcon Data="{StaticResource attach_regular}" Width="18" Height="18" Margin="0"/>
 							</Button>

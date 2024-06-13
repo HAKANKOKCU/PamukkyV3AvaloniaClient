@@ -5,7 +5,7 @@
         mc:Ignorable="d" d:DesignWidth="800" d:DesignHeight="450"
         x:Class="PamukkyDesktopClient.Views.MediaViewer"
         Title="MediaViewer" TransparencyLevelHint="AcrylicBlur"
-        Background="Transparent" ExtendClientAreaToDecorationsHint="True" WindowState="FullScreen">
+        Background="Transparent" ExtendClientAreaToDecorationsHint="True" WindowState="FullScreen" ExtendClientAreaChromeHints="NoChrome" ExtendClientAreaTitleBarHeightHint="0" SystemDecorations="BorderOnly">
 	<DockPanel Background="#80000000">
 		<ExperimentalAcrylicBorder IsHitTestVisible="False">
 			<ExperimentalAcrylicBorder.Material>
@@ -27,7 +27,7 @@
 			
 			<Label HorizontalContentAlignment="Center" Foreground="White" VerticalAlignment="Center">Image</Label>
 		</DockPanel>
-		<Canvas Name="cv">
+		<Canvas Name="cv" Background="Transparent">
 			<Image Name="image"></Image>
 		</Canvas>
 		
