@@ -1,3 +1,5 @@
+# Probably discontinued!!!!!!!!!!!
+Compiling was taking 20 minutes (and i have to use this pc), i gave up.
 # PamukkyV3AvaloniaClient
 Avalonia (C#) Client for Pamukky V3.
 
